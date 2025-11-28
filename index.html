@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Food Wheel - What to Eat?</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #f7f8fc;
+    }
+    .wheel-container {
+      position: relative;
+      width: 400px;
+      height: 400px;
+      margin-top: 20px;
+    }
+    #wheel {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 8px solid #333;
+      transition: transform 5s cubic-bezier(0.33, 1, 0.68, 1);
+    }
+    .pointer {
+      position: absolute;
+      top: -30px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 25px solid transparent;
+      border-right: 25px solid transparent;
+      border-bottom: 35px solid red;
+    }
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    #map {
+      width: 100%;
+      max-width: 600px;
+      height: 400px;
+      margin-top: 20px;
+      display: none;
+      border: 2px solid #333;
+    }
+    #findBtn {
+      display: none;
+      padding: 10px 25px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🎡 What Should I Eat?</h1>
+
+  <div class="wheel-container">
+    <div class="pointer"></div>
+    <canvas id="wheel" width="400" height="400"></canvas>
+  </div>
+
+  <button onclick="spinWheel()">SPIN 🍽️</button>
+  <h2 id="resultText"></h2>
+  <button id="findBtn" onclick="showNearbyRestaurants()">Show Nearby Restaurants 🍜</button>
+
+  <div id="map"></div>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places"></script>
+<script>
+  const wheelCanvas = document.getElementById("wheel");
+  const ctx = wheelCanvas.getContext("2d");
+
+  const foods = ["Pizza", "Noodles", "Burger", "Sushi", "Steak", "Suki", "Fried Rice", "Ramen", "Khaokhaamoo"];
+  const colors = ["#FF5733", "#FFC300", "#DAF7A6", "#FF33EC", "#33FFF3", "#75FF33", "#FF8C33", "#3375FF"];
+  
+  let selectedFood = null;
+
+  function drawWheel() {
+    const arcSize = (2 * Math.PI) / foods.length;
+    foods.forEach((food, i) => {
+      let angle = i * arcSize;
+      ctx.beginPath();
+      ctx.fillStyle = colors[i];
+      ctx.moveTo(200, 200);
+      ctx.arc(200, 200, 200, angle, angle + arcSize);
+      ctx.fill();
+
+      ctx.save();
+      ctx.translate(200, 200);
+      ctx.rotate(angle + arcSize / 2);
+      ctx.textAlign = "right";
+      ctx.fillStyle = "#000";
+      ctx.font = "16px Arial";
+      ctx.fillText(food, 180, 10);
+      ctx.restore();
+    });
+  }
+  drawWheel();
+
+  function spinWheel() {
+    let randomSpin = Math.floor(Math.random() * 360) + 720;
+    wheelCanvas.style.transform = `rotate(${randomSpin}deg)`;
+
+    setTimeout(() => {
+      const index = Math.floor(((randomSpin % 360) / 360) * foods.length);
+      selectedFood = foods[index];
+      document.getElementById("resultText").innerText = `You should eat: 🍴 ${selectedFood}!`;
+      document.getElementById("findBtn").innerText = `Show ${selectedFood} Restaurants Near Me 🍜`;
+      document.getElementById("findBtn").style.display = "inline-block";
+    }, 5000);
+  }
+
+  function showNearbyRestaurants() {
+    if (!selectedFood) return alert("Spin the wheel first!");
+
+    navigator.geolocation.getCurrentPosition(position => {
+      const location = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+
+      const map = new google.maps.Map(document.getElementById("map"), {
+        center: location,
+        zoom: 14
+      });
+
+      document.getElementById("map").style.display = "block";
+
+      const request = {
+        location: location,
+        radius: 3000,
+        keyword: selectedFood + " restaurant"
+      };
+
+      const service = new google.maps.places.PlacesService(map);
+      service.nearbySearch(request, (results, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK) {
+          results.forEach(place => {
+            new google.maps.Marker({
+              position: place.geometry.location,
+              map: map,
+              title: place.name
+            });
+          });
+        }
+      });
+    });
+  }
+</script>
+
+</body>
+</html>
